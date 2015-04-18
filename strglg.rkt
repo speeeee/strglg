@@ -16,8 +16,8 @@
                                                   (append (ret-pop n) (list (append (pop n) (list #\")) '())))
                  (to-list (cdr strg) (push (ret-pop n) (push (pop n) (car strg)))))]
             [(or (char=? (car strg) #\() (char=? (car strg) #\)) (char=? (car strg) #\,)
-                 (char=? (car strg) #\=)
-                 (char=? (car strg) #\:)) (to-list (cdr strg) (append n (list (list (car strg)) '())))]
+                 (char=? (car strg) #\.)
+                 (char=? (car strg) #\?)) (to-list (cdr strg) (append n (list (list (car strg)) '())))]
             [(char=? (car strg) #\") (to-list (cdr strg) (append n (list (list #\"))))]
             [else (to-list (cdr strg) (push (ret-pop n) (push (pop n) (car strg))))])))
 
@@ -32,7 +32,7 @@
 (define (parenthesize lst)
   (paren lst '()))
 (define (paren lst n)
-  (if (empty? lst) n (paren (cdr lst) (push~ n (car lst)))))
+  (if (empty? lst) (filter (λ (x) (not (equal? x ","))) n) (paren (cdr lst) (push~ n (car lst)))))
 
 #;(define (expr lst)
   (if (and (char-alphabetic? (car (string->list (car lst)))) (list? (second lst)))
@@ -45,8 +45,14 @@
         [(string=? (car lst) ",") (append (list n) (commas (cdr lst)))]
         [else (cms (cdr lst) (push n (car lst)))])))
 
+(define (sentence lst n)
+  (if (empty? lst) n
+      (cond [(equal? (car lst) ".") (sentence (cdr lst) (push (ret-pop n) (list 'statement (pop n))))]
+            [(equal? (car lst) "?") (sentence (cdr lst) (push (ret-pop n) (list 'question (pop n))))]
+            [else (sentence (cdr lst) (push n (car lst)))])))
+
 (define (parse lst) ;expr is mapped because later there will be a statement list.
-  (parenthesize lst))
+  (sentence (parenthesize lst) '()))
 
 (define (process strg)
   (parse (into-list (string->list strg))))
