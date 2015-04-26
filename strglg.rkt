@@ -9,15 +9,14 @@
 (define (into-list strg)
   (map list->string (filter (λ (x) (not (equal? x '()))) (to-list (filter (λ (x) (not (char=? x #\space))) strg) '(())))))
 
-(define (to-list strg n)
+(define (to-list strg n) 
   (if (empty? strg) n
       (cond [(and (not (empty? (pop n))) (char=? (car (pop n)) #\"))
              (if (char=? (car strg) #\") (to-list (cdr strg) 
                                                   (append (ret-pop n) (list (append (pop n) (list #\")) '())))
                  (to-list (cdr strg) (push (ret-pop n) (push (pop n) (car strg)))))]
-            [(or (char=? (car strg) #\() (char=? (car strg) #\)) (char=? (car strg) #\,)
-                 (char=? (car strg) #\.)
-                 (char=? (car strg) #\?)) (to-list (cdr strg) (append n (list (list (car strg)) '())))]
+            [(member (car strg) (list #\( #\) #\, #\. #\? #\;)) (to-list (cdr strg) (append n (list (list (car strg)) '())))]
+            [(and (> (length strg) 2) (equal? (take strg 2) (list #\: #\-))) (to-list (cddr strg) (append n (list (list #\: #\-) '())))]
             [(char=? (car strg) #\") (to-list (cdr strg) (append n (list (list #\"))))]
             [else (to-list (cdr strg) (push (ret-pop n) (push (pop n) (car strg))))])))
 
@@ -49,10 +48,21 @@
   (if (empty? lst) n
       (cond [(equal? (car lst) ".") (sentence (cdr lst) (push (ret-pop n) (list 'statement (pop n))))]
             [(equal? (car lst) "?") (sentence (cdr lst) (push (ret-pop n) (list 'question (pop n))))]
+            [(equal? (car lst) ";") (sentence (cdr lst) (push (ret-pop n) (list 'nondet (pop n))))]
             [else (sentence (cdr lst) (push n (car lst)))])))
 
+(define (rm-commas lst) (filter (λ (x) (not (equal? x ","))) lst))
+(define (infix:- lst n)
+  (if (empty? lst) n
+      (cond [(equal? (car lst) ":-") (let ([q (dropf lst (λ (x) (or (not (list? x)) (not (equal? (car x) 'statement)))))])
+             (infix:- (cdr q)
+                      (push (ret-pop n) (list ":-" (pop n)
+                        (append (takef (cdr lst) (λ (x) (and (list? x)) (not (equal? (car x) 'statement))))
+                                (list (car q)))))))]
+            [else (infix:- (cdr lst) (push n (car lst)))])))
+
 (define (parse lst) ;expr is mapped because later there will be a statement list.
-  (sentence (parenthesize lst) '()))
+  (infix:- (sentence (parenthesize (rm-commas lst)) '()) '()))
 
 (define (process strg)
   (parse (into-list (string->list strg))))
