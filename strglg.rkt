@@ -6,6 +6,8 @@
 (define (pop stk) (car (reverse stk)))
 (define (ret-pop stk) (reverse (cdr (reverse stk))))
 
+(define facts* '())
+
 (define (into-list strg)
   (map list->string (filter (λ (x) (not (equal? x '()))) (to-list (filter (λ (x) (not (char=? x #\space))) strg) '(())))))
 
@@ -60,14 +62,21 @@
                         (append (takef (cdr lst) (λ (x) (and (list? x)) (not (equal? (car x) 'statement))))
                                 (list (car q)))))))]
             [else (infix:- (cdr lst) (push n (car lst)))])))
+(define (add-statements lst) (adds lst '()))
+(define (adds lst n)
+  (if (empty? lst) n
+      (if (and (list? (car lst)) (equal? (caar lst) 'statement)) (begin (set! facts* (push facts* (second (car lst))))
+                                                                        (adds (cdr lst) n))
+          (adds (cdr lst) (push n (car lst))))))
 
 (define (parse lst) ;expr is mapped because later there will be a statement list.
-  (infix:- (sentence (parenthesize (rm-commas lst)) '()) '()))
+  (add-statements (infix:- (sentence (parenthesize (rm-commas lst)) '()) '())))
 
 (define (process strg)
   (parse (into-list (string->list strg))))
 
 (define (main)
-  (write (process (read-line))))
+  (write (process (read-line)))
+  (displayln facts*))
 
 (main)
