@@ -69,14 +69,26 @@
                                                                         (adds (cdr lst) n))
           (adds (cdr lst) (push n (car lst))))))
 
+; not final definition; just quick sketch for it.
+(define (questions lst) (qs lst '()))
+(define (qs lst n)
+  (if (empty? lst) n
+      (if (and (list? (car lst)) (equal? (caar lst) 'question))
+          (if (empty? (filter (λ (x) (equal? x (second (car lst)))) facts*)) 
+              (qs (cdr lst) (push n #f)) (qs (cdr lst) (push n (second (car lst)))))
+          (qs (cdr lst) (push n (car lst))))))
+
+(define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) #f l))
+          
+
 (define (parse lst) ;expr is mapped because later there will be a statement list.
-  (add-statements (infix:- (sentence (parenthesize (rm-commas lst)) '()) '())))
+  (map (λ (x) (valid? (second x))) (add-statements (infix:- (sentence (parenthesize (rm-commas lst)) '()) '()))))
 
 (define (process strg)
   (parse (into-list (string->list strg))))
 
 (define (main)
   (write (process (read-line)))
-  (displayln facts*))
+  (main))
 
 (main)
