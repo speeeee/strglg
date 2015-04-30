@@ -6,6 +6,7 @@
 (define (pop stk) (car (reverse stk)))
 (define (ret-pop stk) (reverse (cdr (reverse stk))))
 
+(define dep-facts* '())
 (define facts* '())
 
 (define (into-list strg)
@@ -22,12 +23,14 @@
             [(char=? (car strg) #\") (to-list (cdr strg) (append n (list (list #\"))))]
             [else (to-list (cdr strg) (push (ret-pop n) (push (pop n) (car strg))))])))
 
+(define (underscores lst) (map (λ (x) (if (equal? (first (string->list x)) #\_) (list x "var") x)) lst))
+
 (define (push~ n s)
-  (if (empty? n) (if (string=? s "(") (push n '()) (push n s))
+  (if (empty? n) (if (equal? s "(") (push n '()) (push n s))
   (cond [(and (list? (pop n)) (or (empty? (pop n)) (not (equal? (car (pop n)) 'full))))
          (push (ret-pop n) (push~ (pop n) s))]
-        [(string=? s "(") (push n '())]
-        [(string=? s ")") (append (list 'full) n)]
+        [(equal? s "(") (push n '())]
+        [(equal? s ")") (append (list 'full) n)]
         [else (push n s)])))
 
 (define (parenthesize lst)
@@ -79,10 +82,18 @@
           (qs (cdr lst) (push n (car lst))))))
 
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) #f l))
+
+(define (add-df lst) (ad lst '()))
+(define (ad lst n)
+  (if (empty? lst) n
+      (if (and (list? (car lst)) (equal? (caar lst) ":-")) (begin (set! dep-facts* (push dep-facts* (cdar lst)))
+                                                                 (ad (cdr lst) n)) (ad (cdr lst) (car lst)))))
+          
           
 
 (define (parse lst) ;expr is mapped because later there will be a statement list.
-  (map (λ (x) (valid? (second x))) (add-statements (infix:- (sentence (parenthesize (rm-commas lst)) '()) '()))))
+  (map (λ (x) (if (and (list? x) (equal? (first x) 'question))
+                  (valid? (second x)) x)) (add-df (add-statements (infix:- (sentence (parenthesize (rm-commas lst)) '()) '())))))
 
 (define (process strg)
   (parse (into-list (string->list strg))))
