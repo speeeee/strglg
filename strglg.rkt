@@ -72,14 +72,9 @@
                                                                         (adds (cdr lst) n))
           (adds (cdr lst) (push n (car lst))))))
 
-; not final definition; just quick sketch for it.
-(define (questions lst) (qs lst '()))
-(define (qs lst n)
-  (if (empty? lst) n
-      (if (and (list? (car lst)) (equal? (caar lst) 'question))
-          (if (empty? (filter (λ (x) (equal? x (second (car lst)))) facts*)) 
-              (qs (cdr lst) (push n #f)) (qs (cdr lst) (push n (second (car lst)))))
-          (qs (cdr lst) (push n (car lst))))))
+(define (q lst)
+  (map (λ (x) (if (and (list? x) (equal? (car x) 'question))
+                  (valid? (second x)) x)) lst))
 
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) #f l))
 
@@ -87,13 +82,23 @@
 (define (ad lst n)
   (if (empty? lst) n
       (if (and (list? (car lst)) (equal? (caar lst) ":-")) (begin (set! dep-facts* (push dep-facts* (cdar lst)))
-                                                                 (ad (cdr lst) n)) (ad (cdr lst) (car lst)))))
-          
-          
+                                                                  (ad (cdr lst) n)) (ad (cdr lst) (push n (car lst))))))
+
+(define (cm-ors lst) (coms lst '()))
+(define (coms lst n) (displayln lst)
+  (if (empty? lst) n
+      (cond [(and (list? (car lst)) (equal? (caar lst) 'nondet)
+                  (or (empty? n) (and (list? (pop n)) (not (equal? (car (pop n)) 'nondet)))))
+             (coms (cdr lst) (push n (list 'nondet (cadar lst))))]
+            [(and (list? (car lst)) (equal? (caar lst) 'nondet))
+             (coms (cdr lst) (push (ret-pop n) (push (pop n) (cadar lst))))]
+            [(and (list? (car lst)) (not (equal? (caar lst) 'nondet))
+                  (not (empty? n)) (list? (pop n)) (equal? (car (pop n)) 'nondet))
+             (coms (cdr lst) (push (ret-pop n) (append (list 'or) (cdr (push (pop n) (cadar lst))))))]
+            [else (coms (cdr lst) (push n (car lst)))])))
 
 (define (parse lst) ;expr is mapped because later there will be a statement list.
-  (map (λ (x) (if (and (list? x) (equal? (first x) 'question))
-                  (valid? (second x)) x)) (add-df (add-statements (infix:- (sentence (parenthesize (rm-commas lst)) '()) '())))))
+  (q (add-df (add-statements (infix:- (cm-ors (sentence (parenthesize (rm-commas lst)) '())) '())))))
 
 (define (process strg)
   (parse (into-list (string->list strg))))
