@@ -61,7 +61,8 @@
   (if (empty? lst) n
       (cond [(equal? (car lst) ":-") (let ([q (dropf lst (λ (x) (or (not (list? x)) (not (equal? (car x) 'statement)))))])
              (infix:- (cdr q)
-                      (push (ret-pop n) (list ":-" (pop n)
+                      (push (ret-pop n) (list ":-" (pop n) #;(filter (λ (x) (not (equal? (car (string->list x)) #\_))) (cdr (pop n)))
+                                              #;(filter (λ (x) (equal? (car (string->list x)) #\_)) (cdr (pop n)))
                         (append (takef (cdr lst) (λ (x) (and (list? x)) (not (equal? (car x) 'statement))))
                                 (list (car q)))))))]
             [else (infix:- (cdr lst) (push n (car lst)))])))
@@ -76,7 +77,11 @@
   (map (λ (x) (if (and (list? x) (equal? (car x) 'question))
                   (valid? (second x)) x)) lst))
 
-(define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) #f l))
+(define (dep? lst l)
+  (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f))
+
+(define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) 
+                       (if (empty? (filter (λ (x) (dep? x l)) dep-facts*)) #f l) l))
 
 (define (add-df lst) (ad lst '()))
 (define (ad lst n)
@@ -105,6 +110,7 @@
 
 (define (main)
   (write (process (read-line)))
+  (write dep-facts*)
   (main))
 
 (main)
