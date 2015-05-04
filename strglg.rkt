@@ -57,7 +57,7 @@
             [else (sentence (cdr lst) (push n (car lst)))])))
 
 (define (rm-commas lst) (filter (λ (x) (not (equal? x ","))) lst))
-(define (infix:- lst n)
+(define (infix:- lst n) (displayln lst)
   (if (empty? lst) n
       (cond [(equal? (car lst) ":-") (let ([q (dropf lst (λ (x) (or (not (list? x)) (not (equal? (car x) 'statement)))))])
              (infix:- (cdr q)
@@ -66,6 +66,7 @@
                         (append (takef (cdr lst) (λ (x) (and (list? x)) (not (equal? (car x) 'statement))))
                                 (list (car q)))))))]
             [else (infix:- (cdr lst) (push n (car lst)))])))
+
 (define (add-statements lst) (adds lst '()))
 (define (adds lst n)
   (if (empty? lst) n
@@ -75,10 +76,23 @@
 
 (define (q lst)
   (map (λ (x) (if (and (list? x) (equal? (car x) 'question))
-                  (valid? (second x)) x)) lst))
+                  (valid? (second x)) 
+                  (if (and (list? x) (equal? (car x) 'or))
+                      (if (ormap valid? (cdr x)) (findf valid? x) #f) x))) lst))
+
+#;(define (dep? lst l)
+  (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f))
 
 (define (dep? lst l)
-  (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f))
+  (map (λ (x) 
+    (if (not (equal? (length l) (length (car x)))) #f
+        (let ([c (list (map (λ (a b) (if (equal? a b) a (if (equal? (car (string->list x) b) #\_) (list a b) #f))) (cdar x) (cdr l)) (cdr x))])
+          (if (not (member #f c))
+              (let d? ([s '()] [ls '()])
+                (map (λ (y) (if (list? y) (map (λ (z) (d? s (cdr z))) y)
+                                (if (equal? (car (string->list y) #\_)) (findf (λ (q) (equal? q y)) (map second s)) y))) ls)
+              (d? (filter (λ (q) (and (list? q) (= (length q) 2) (equal? (car (string->list (cadr q))) #\_))) (car c)) (cdr c))) #f)))) dep-facts*))
+                  
 
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) 
                        (if (empty? (filter (λ (x) (dep? x l)) dep-facts*)) #f l) l))
@@ -86,20 +100,29 @@
 (define (add-df lst) (ad lst '()))
 (define (ad lst n)
   (if (empty? lst) n
-      (if (and (list? (car lst)) (equal? (caar lst) ":-")) (begin (set! dep-facts* (push dep-facts* (cdar lst)))
-                                                                  (ad (cdr lst) n)) (ad (cdr lst) (push n (car lst))))))
+      (if (and (list? (car lst)) (equal? (caar lst) ":-")) 
+          (begin (set! dep-facts* (push dep-facts* 
+                                        (push (ret-pop (cdar lst)) 
+                                              (push (ret-pop (second (cdar lst))) 
+                                                (cond [(and (list? (second (pop (second (cdar lst))))) (equal? (car (second (pop (second (cdar lst))))) 'or) (equal? (car (pop (second (cdar lst)))) 'statement)) 
+                                                       (second (pop (second (cdar lst))))]
+                                                      [(equal? (car (pop (second (cdar lst)))) 'statement) (list 'question (second (pop (second (cdar lst)))))])))))
+                 (ad (cdr lst) n)) (ad (cdr lst) (push n (car lst))))))
 
 (define (cm-ors lst) (coms lst '()))
-(define (coms lst n) (displayln lst)
+(define (coms lst n)
   (if (empty? lst) n
       (cond [(and (list? (car lst)) (equal? (caar lst) 'nondet)
-                  (or (empty? n) (and (list? (pop n)) (not (equal? (car (pop n)) 'nondet)))))
+                  (or (empty? n) (not (list? (pop n))) (and (list? (pop n)) (not (equal? (car (pop n)) 'nondet)))))
              (coms (cdr lst) (push n (list 'nondet (cadar lst))))]
             [(and (list? (car lst)) (equal? (caar lst) 'nondet))
              (coms (cdr lst) (push (ret-pop n) (push (pop n) (cadar lst))))]
             [(and (list? (car lst)) (not (equal? (caar lst) 'nondet))
                   (not (empty? n)) (list? (pop n)) (equal? (car (pop n)) 'nondet))
-             (coms (cdr lst) (push (ret-pop n) (append (list 'or) (cdr (push (pop n) (cadar lst))))))]
+             (coms (cdr lst) (push (ret-pop n) 
+                                   (if (equal? (caar lst) 'statement)
+                                       (list 'statement (append (list 'or) (cdr (push (pop n) (cadar lst)))))
+                                       (append (list 'or) (cdr (push (pop n) (cadar lst)))))))]
             [else (coms (cdr lst) (push n (car lst)))])))
 
 (define (parse lst) ;expr is mapped because later there will be a statement list.
