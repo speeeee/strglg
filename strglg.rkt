@@ -83,15 +83,26 @@
 #;(define (dep? lst l)
   (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f))
 
-(define (dep? lst l)
+#;(define (dep? lst l)
   (map (λ (x) 
     (if (not (equal? (length l) (length (car x)))) #f
-        (let ([c (list (map (λ (a b) (if (equal? a b) a (if (equal? (car (string->list x) b) #\_) (list a b) #f))) (cdar x) (cdr l)) (cdr x))])
+        (let ([c (list (map (λ (a b) (if (equal? a b) a (if (equal? (car (string->list a)) #\_) (list a b) #f))) (cdar x) (cdr l)) (cdr x))])
           (if (not (member #f c))
               (let d? ([s '()] [ls '()])
                 (map (λ (y) (if (list? y) (map (λ (z) (d? s (cdr z))) y)
                                 (if (equal? (car (string->list y) #\_)) (findf (λ (q) (equal? q y)) (map second s)) y))) ls)
               (d? (filter (λ (q) (and (list? q) (= (length q) 2) (equal? (car (string->list (cadr q))) #\_))) (car c)) (cdr c))) #f)))) dep-facts*))
+
+#;(define (sym-eq? a b)
+  (or (and (list? a) (list? b) (= (length a) (length b))) ()))
+(define (dep? f l) 
+  (let ([d (filter (λ (x) (and (list? x) (= (length x) 2) (equal? (car (string->list (second x))) #\_)))
+             (map (λ (x y) (if (equal? (car (string->list x)) #\_) (list y x) 
+                               (if (equal? x y) x #f))) (cdar f) (cdr l)))])
+    (q (let repl ([ls (second f)])
+      (cond [(list? ls) (map repl ls)]
+            [(and (string? ls) (equal? (car (string->list ls)) #\_)) (car (findf (λ (q) (equal? (second q) ls)) d))]
+            [else ls])))))
                   
 
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) 
