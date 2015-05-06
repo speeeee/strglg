@@ -79,8 +79,13 @@
                   (valid? (second x)) 
                   (if (and (list? x) (equal? (car x) 'or))
                       (if (ormap valid? (cdr x)) (findf valid? x) #f) x))) lst))
+(define (qs x)
+  (if (and (list? x) (equal? (car x) 'question))
+      (valid? (second x)) 
+      (if (and (list? x) (equal? (car x) 'or))
+        (if (ormap valid? (cdr x)) (findf valid? x) #f) x)))
 
-#;(define (dep? lst l)
+(define (all-real? lst l)
   (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f))
 
 #;(define (dep? lst l)
@@ -95,14 +100,14 @@
 
 #;(define (sym-eq? a b)
   (or (and (list? a) (list? b) (= (length a) (length b))) ()))
-(define (dep? f l) 
+(define (dep? f l) (if (or (not (list? l)) (not (= (length l) (length (car f)))) (not (all-real? f l))) #f
   (let ([d (filter (λ (x) (and (list? x) (= (length x) 2) (equal? (car (string->list (second x))) #\_)))
              (map (λ (x y) (if (equal? (car (string->list x)) #\_) (list y x) 
                                (if (equal? x y) x #f))) (cdar f) (cdr l)))])
-    (q (let repl ([ls (second f)])
+    (andmap qs (let repl ([ls (second f)])
       (cond [(list? ls) (map repl ls)]
             [(and (string? ls) (equal? (car (string->list ls)) #\_)) (car (findf (λ (q) (equal? (second q) ls)) d))]
-            [else ls])))))
+            [else ls]))))))
                   
 
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) 
