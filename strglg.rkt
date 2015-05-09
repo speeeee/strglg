@@ -85,8 +85,9 @@
       (if (and (list? x) (equal? (car x) 'or))
         (if (ormap valid? (cdr x)) (findf valid? x) #f) x)))
 
-(define (all-real? lst l)
-  (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f))
+(define (all-real? lst l) 
+  (if (or (not (list? l)) (not (= (length (car lst)) (length l)))) #f
+    (if (andmap (λ (x e) (or (equal? x e) (equal? (car (string->list x)) #\_))) (cdar lst) (cdr l)) l #f)))
 
 #;(define (dep? lst l)
   (map (λ (x) 
@@ -111,7 +112,10 @@
                   
 
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) 
-                       (if (empty? (filter (λ (x) (dep? x l)) dep-facts*)) #f l) l))
+                       (if (empty? (filter (λ (x) (dep? x l)) dep-facts*)) 
+                           (cond  [(all-real? (list (list 'full "_a" "Prn") '(a)) l)
+                                   (begin (displayln (second l)) l)]
+                                  [else #f]) l) l))
 
 (define (add-df lst) (ad lst '()))
 (define (ad lst n)
