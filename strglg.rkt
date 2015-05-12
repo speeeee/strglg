@@ -115,6 +115,8 @@
                        (if (empty? (filter (λ (x) (dep? x l)) dep-facts*)) 
                            (cond  [(all-real? (list (list 'full "_a" "Prn") '(a)) l)
                                    (begin (displayln (second l)) l)]
+                                  [(all-real? (list (list 'full "_a" "_b" "Eq") '(a)) l)
+                                   (if (equal? (second l) (third l)) l #f)]
                                   [else #f]) l) l))
 
 (define (add-df lst) (ad lst '()))
