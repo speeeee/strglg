@@ -1,6 +1,7 @@
 #lang racket/base
 (require racket/string
-         racket/list)
+         racket/list
+         racket/cmdline)
 
 (define (push stk elt) (append stk (list elt)))
 (define (pop stk) (car (reverse stk)))
@@ -8,6 +9,8 @@
 
 (define dep-facts* '())
 (define facts* '())
+(define out-port* '())
+(define in-port* (current-output-port))
 
 (define (into-list strg)
   (map list->string (filter (λ (x) (not (equal? x '()))) (to-list (filter (λ (x) (not (char=? x #\space))) strg) '(())))))
@@ -114,7 +117,7 @@
 (define (valid? l) (if (empty? (filter (λ (x) (equal? x l)) facts*)) 
                        (if (empty? (filter (λ (x) (dep? x l)) dep-facts*)) 
                            (cond  [(all-real? (list (list 'full "_a" "Prn") '(a)) l)
-                                   (begin (displayln (second l)) l)]
+                                   (begin (displayln (list->string (cdr (ret-pop (string->list (second l)))))) l)]
                                   [(all-real? (list (list 'full "_a" "_b" "Eq") '(a)) l)
                                    (if (equal? (second l) (third l)) l #f)]
                                   [else #f]) l) l))
@@ -155,7 +158,20 @@
 
 (define (main)
   (write (process (read-line)))
-  (write dep-facts*)
   (main))
 
-(main)
+(define (super-main)
+  (cond [(empty? (vector->list (current-command-line-arguments))) (main)]
+        [(= (length (vector->list (current-command-line-arguments))) 1)
+         (begin (set! out-port* (car (vector->list (current-command-line-arguments))))
+                (process (read-line)))]
+        [(= (length (vector->list (current-command-line-arguments))) 2)
+         (begin (set! out-port* (open-output-file (car (vector->list (current-command-line-arguments)))))
+                (pline (open-input-file (second (vector->list (current-command-line-arguments))))))]
+        [else #f]))
+
+(define (pline e)
+  (let ([x (read-line e)])
+    (if (equal? x eof) #t (pline e))))
+
+(super-main)
